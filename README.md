@@ -2,6 +2,13 @@
 
 API CRUD simples seguindo boas práticas (camadas separadas, validação, autenticação) para gerenciar **Usuários**, **Endereços** e **Contatos**. Autenticação por **JWT (Bearer Token)**. Pronta para rodar com **Docker Compose** (MySQL + API) ou localmente.
 
+- Banco: MySQL (Sequelize)
+- Arquitetura: camadas (Controller → Service → Repository → Model)
+- Validação: Joi
+- Observabilidade & Segurança: morgan, helmet, CORS
+- Docs interativas: Swagger UI em /api/docs
+- Coleção Postman: postman/AgendaContatos.postman_collection.json
+  
 ## Stack
 - Node.js (Express)
 - MySQL (Sequelize ORM)
@@ -39,6 +46,27 @@ cp .env.example .env
 | DB_USER     | Usuário do MySQL                              |
 | DB_PASS     | Senha do MySQL                                |
 
+
+## Detalhes sobre o projeto
+Entidades
+- Usuarios: id, nome, senha(hash), email, dataNascimento, rg, cpf
+- Enderecos: id, idUsuario(FK Usuarios[id]), cep, rua, numero, complemento, bairro, cidade, estado
+- Contatos: id, idUsuario(FK Usuarios[id]), numeroTelefone
+
+Rotas públicas
+- POST /api/auth/register — cria usuário (retorna sem a senha)
+- POST /api/auth/login — retorna { token }
+
+Rotas protegidas (Bearer Token)
+- GET /api/usuarios | GET /api/usuarios/:id | PUT /api/usuarios/:id | DELETE /api/usuarios/:id
+- POST /api/usuarios/:idUsuario/enderecos | GET /api/usuarios/:idUsuario/enderecos
+- GET /api/enderecos/:id | PUT /api/enderecos/:id | DELETE /api/enderecos/:id
+- POST /api/usuarios/:idUsuario/contatos | GET /api/usuarios/:idUsuario/contatos
+- GET /api/contatos/:id | PUT /api/contatos/:id | DELETE /api/contatos/:id
+
+O middleware de autenticação é aplicado dentro do router após router.use(authMiddleware).
+O Swagger fica fora do middleware, montado em app.js antes das rotas, em /api/docs.
+
 ---
 ## Rodando com Docker Compose (recomendado)
 1) **Crie o .env**:
@@ -50,16 +78,7 @@ cp .env.example .env
 ```bash
 docker compose up --build
 ```
-3) A API ficará em `http://localhost:3000/api` e o MySQL em `localhost:3306`.
-
-### Acessar o banco com seu MySQL local (Workbench/CLI)
-- Host: `127.0.0.1`
-- Porta: `3306`
-- Usuário: valor de `DB_USER` (padrão: root)
-- Senha: valor de `DB_PASS` (padrão: secret)
-- Database: `DB_NAME` (padrão: agenda)
-
-> **Obs.:** O banco está dentro do container, mas a porta é mapeada, então seu Workbench consegue conectar normalmente.
+1) A API ficará em `http://localhost:3000/api`.
 
 ---
 ## Rodando localmente (sem Docker)
@@ -132,6 +151,25 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/usuarios
 - Importe o arquivo `postman/AgendaContatos.postman_collection.json`
 - Ajuste a variável `baseUrl` para `http://localhost:3000/api`
 - Após o login, copie o token e cole em **Authorization → Bearer Token** ou use a variável `{{token}}`
+
+---
+## Swagger
+
+- URL: http://localhost:3000/api/docs
+- Clique em Authorize (esquema bearerAuth) e cole apenas o token (sem Bearer — o Swagger já adiciona).
+- O spec fica em src/docs/openapi.js.
+- O mount do Swagger está em src/app.js antes de app.use('/api', routes) para não passar no middleware.
+
+---
+## Troubleshooting rápido
+
+- Porta 3306 ocupada (se usar MySQL em container): mapeie para 3307:3306 ou use seu MySQL local/externo.
+- Conexão ao MySQL externo no Docker (Windows/macOS): DB_HOST=host.docker.internal.
+Linux: use extra_hosts e/ou o IP do host/servidor.
+- Conflitos npm (ERESOLVE):
+-- No container, o Dockerfile já instala somente produção (--omit=dev) e ignora peers de ferramentas de dev.
+-- Para desenvolvimento local com ESLint, alinhe versões:
+eslint 8.57.0, eslint-config-standard 17.1.0, eslint-plugin-n 16.6.2, eslint-plugin-promise 6.1.1, eslint-plugin-import 2.31.0.
 
 ---
 ## Licença
