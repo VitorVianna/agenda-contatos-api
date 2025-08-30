@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: agenda-api
+    ports:
+      - "3000:3000"           # acesse http://localhost:3000/api
+    env_file:
+      - .env                  # credenciais e configs vêm do seu .env
+    # No Linux, descomente as 2 linhas abaixo para usar host.docker.internal:
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+    restart: unless-stopped
